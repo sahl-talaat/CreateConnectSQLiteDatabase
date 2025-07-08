@@ -45,11 +45,14 @@ internal class Program
                 switch (choice)
                 {
                     case 1:
-                        Console.Write("* Enter Product Name : ");
-                        string name = Console.ReadLine();
-                        Console.Write("* Enter Product Price : ");
-                        if (int.TryParse(Console.ReadLine(), out int price))
-                            Create(sqliteConnection, name, price);
+                        Console.Write("* Enter Product ID : ");
+                        if (int.TryParse(Console.ReadLine(), out int id));
+                        {
+                            Console.Write("* Enter Product Name : ");
+                            string name = Console.ReadLine();
+                            Console.Write("* Enter Product Price : ");
+                            if (int.TryParse(Console.ReadLine(), out int price))
+                                Create(sqliteConnection, id, name, price);
                             
                             //Console.Write("* Enter Product Quantity : ");
                             //if (int.TryParse(Console.ReadLine(), out int quantity))
@@ -58,7 +61,7 @@ internal class Program
                             //    if (int.TryParse(Console.ReadLine(), out int price))
                             //        CreateProduct(sqliteConnection, id, name!, quantity, price);
                             //}
-                        
+                        }
                        
                         break;
 
@@ -67,11 +70,11 @@ internal class Program
                         break;
 
                     case 3:
-                        UpdateByID(sqliteConnection);
+                        UpdateByName(sqliteConnection);
                         break;
 
                     case 4:
-                        DeleteByID(sqliteConnection);
+                        DeleteByName(sqliteConnection);
                         break;
 
                     case 0:
@@ -109,13 +112,12 @@ internal class Program
 
 
     // create table or open it, if it exist
-    static void CreateTable(SQLiteConnection connection)
+    static void CreateTable(SQLiteConnection conn)
     {
-        string SQLQueryCreateTabel = @"CREATE TABLE IF NOT EXISTS Product(Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                                          Name VARCHAR(20) NOT NULL,
-                                                                          Quantity Real,
-                                                                          Price Real NOT NULL)";
-        using (SQLiteCommand command = connection.CreateCommand())
+        string SQLQueryCreateTabel = @"CREATE TABLE IF NOT EXISTS Product(Id INTEGER PRIMARY KEY,
+                                                                          Name VARCHAR(20),
+                                                                          Price INTEGER)";
+        using (SQLiteCommand command = conn.CreateCommand())
         {
             command.CommandText = SQLQueryCreateTabel;
             command.ExecuteNonQuery();
@@ -126,7 +128,7 @@ internal class Program
 
     // crud operation
     // 1. Create
-    static void Create(SQLiteConnection connection, string name, float price)
+    static void Create(SQLiteConnection connection,int id, string name, int price)
     {
         try
         {
@@ -136,15 +138,15 @@ internal class Program
                 //  Automatically cleans up           You must manually call .Dispose()
                 //  Safer, less error-prone	          Risk of memory or resource leaks
                 //  Preferred in 99% of cases	      Only skip in special scenarios
-                command.CommandText = "INSERT INTO Product(Name, Price) VALUES (@name, @price)";
+                command.CommandText = "INSERT INTO Product(Id, Name, Price) VALUES (@id, @name, @price)";
                 //command.CommandText = "INSERT INTO Product(Id, Name, Quantity, Price) VALUES (@id, @name, @quantity, @price)";
-                //command.Parameters.AddWithValue("@id", id);
+                command.Parameters.AddWithValue("@id", id);
                 command.Parameters.AddWithValue("@name", name);
                 //command.Parameters.AddWithValue("@quantity", quantity);
                 command.Parameters.AddWithValue("@price", price);
                 command.ExecuteNonQuery();
             }
-            Console.WriteLine($"Data Inserted Successfully: the product is {name}: {price}$ per unit");
+            Console.WriteLine($"Data Inserted Successfully: the product is {name} : {price} LE for unit");
         }
         catch (SQLiteException ex)
         {
@@ -163,7 +165,7 @@ internal class Program
             command.CommandText = "SELECT Id, Name, Price FROM Product";
             using (SQLiteDataReader reader = command.ExecuteReader())
             {
-                Console.WriteLine("All Products:");
+                Console.WriteLine("\n📦 All Products:");
                 Console.WriteLine("{id} - {name} - {price}");
                 //Console.WriteLine("{id} - {name} - {quantity} - {price}");
                 while(reader.Read())
@@ -171,7 +173,7 @@ internal class Program
                     int id = reader.GetInt32(0);
                     string name = reader.GetString(1);
                     //int quantity = reader.GetInt32(2);
-                    float price = reader.GetFloat(3);
+                    int price = reader.GetInt32(2);
                     Console.WriteLine($" {id}   - {name}  - {price}");
                 }
             }
@@ -187,7 +189,7 @@ internal class Program
         string name = Console.ReadLine();
 
         Console.Write("Enter the New Price : ");
-        if (!float.TryParse(Console.ReadLine(), out float newPrice))
+        if (!int.TryParse(Console.ReadLine(), out int newPrice))
         {
             Console.WriteLine("Invalid price.");
             return;
@@ -213,41 +215,7 @@ internal class Program
         }
     }
 
-    static void UpdateByID(SQLiteConnection connection)
-    {
-        Console.Write("Enter the Product ID to Update: ");
-        if (!int.TryParse(Console.ReadLine(), out int id))
-        {
-            Console.WriteLine("invalid id");
-            return;
-        }
-        Console.Write("Enter the New Price:");
-        if (!int.TryParse(Console.ReadLine(), out int newPrice))
-        {
-            Console.WriteLine("Invalid Price");
-            return;
-        }
 
-        try
-        {
-            using(SQLiteCommand command = connection.CreateCommand())
-            {
-                command.CommandText = "UPDATE Product SET Price = @newPrice WHERE Id = @id";
-                command.Parameters.AddWithValue("@id", id);
-                command.Parameters.AddWithValue("@newPrice", newPrice);
-                int rowsAffected = command.ExecuteNonQuery();
-
-                if (rowsAffected > 0)
-                    Console.WriteLine($" Product with ID {id} updated to new price: {newPrice}");
-                else
-                    Console.WriteLine($" No product found with ID {id}.");
-            }
-        }
-        catch (SQLiteException e)
-        {
-            Console.WriteLine($"Update Error: {e.Message}");
-        }
-    }
 
     // 4. delete product
     static void DeleteByName(SQLiteConnection connection)
@@ -272,37 +240,6 @@ internal class Program
         catch (SQLiteException ex)
         {
             Console.WriteLine($"Delete Error: {ex.Message}");
-        }
-    }
-
-
-
-    static void DeleteByID(SQLiteConnection connection)
-    {
-        Console.Write("Enter the Product ID to delete: ");
-        if (!int.TryParse(Console.ReadLine(), out int id))
-        {
-            Console.WriteLine("Invalid ID.");
-            return;
-        }
-
-        try
-        {
-            using (SQLiteCommand command = connection.CreateCommand())
-            {
-                command.CommandText = "DELETE FROM AllProducts WHERE Id = @id";
-                command.Parameters.AddWithValue("@id", id);
-                int rowsDeleted = command.ExecuteNonQuery();
-
-                if (rowsDeleted > 0)
-                    Console.WriteLine($" Product with ID {id} deleted successfully.");
-                else
-                    Console.WriteLine($" No product found with ID {id}.");
-            }
-        }
-        catch (SQLiteException e)
-        {
-            Console.WriteLine($"Delete Error: {e.Message}");
         }
     }
 
